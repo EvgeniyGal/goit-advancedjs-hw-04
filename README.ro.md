@@ -4,7 +4,7 @@ Acest proiect a fost creat cu ajutorul Vite. Pentru o mai bună cunoaștere
 și configurare a funcțiilor suplimentare [consultă documentația](https://vitejs.dev/).
 
 ## Crearea repozitoriului pe baza unui model
-
+   
 Utilizează acest repozitoriu al organizației GoIT ca model pentru crearea unui 
 repozitoriu pentru proiectul personal. Pentru a face acest lucru, dă click pe 
 `"Use this template"` și selectează opțiunea `"Create a new repository"`, conform 
