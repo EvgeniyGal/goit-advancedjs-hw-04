@@ -1,12 +1,15 @@
 import * as pixabayApi from './pixabayApi';
 import 'normalize.css/normalize.css';
 import iziToast from 'izitoast';
-import 'izitoast/dist/css/izitoast.css';
+import 'izitoast/dist/css/izitoast.min.css';
+import SimpleLightbox from 'simplelightbox';
+import 'simplelightbox/dist/simple-lightbox.min.css';
 
 let page = 1;
 let question;
 let queryTotalHints;
 let order = 'popular';
+let simpleGallery = new SimpleLightbox('.gallery a');
 
 const elements = {
   form: document.querySelector('.search-form'),
@@ -38,6 +41,7 @@ function handlerChangeOrder(ev) {
     .then(({ hits, totalHits }) => {
       queryTotalHints = totalHits;
       elements.gallery.innerHTML = createMarkup(hits);
+      simpleGallery.refresh();
     })
     .catch(err => console.log(err));
   changeSelectedClassToBtn(currBtn.name);
@@ -57,6 +61,8 @@ function hamdlerLoadMore(ev) {
     .then(({ hits, totalHits }) => {
       queryTotalHints = totalHits;
       elements.gallery.insertAdjacentHTML('beforeend', createMarkup(hits));
+
+      simpleGallery.refresh();
 
       if (page >= Math.ceil(totalHits / 40)) {
         ev.target.classList.toggle('hiden-element', true);
@@ -86,6 +92,12 @@ function handlerSubmit(ev) {
         if (totalHits > 0) {
           queryTotalHints = totalHits;
           elements.gallery.innerHTML = createMarkup(hits);
+          simpleGallery.refresh();
+          iziToast.success({
+            position: 'topLeft',
+            title: 'Hooray!',
+            message: `We found ${totalHits} images.`,
+          });
           elements.loadMoreBtn.classList.toggle(
             'hiden-element',
             totalHits <= 40
@@ -97,6 +109,7 @@ function handlerSubmit(ev) {
             message:
               'there are no images matching your search query. Please try again.',
           });
+          elements.gallery.innerHTML = '';
         }
       })
       .catch(err => console.log(err.message));
@@ -115,9 +128,9 @@ function createMarkup(photoArr) {
         views,
         likes,
       }) => `
-    <div class="photo-card">
-          <img src="${webformatURL}" alt="${tags}" data-large-url="${largeImageURL}" loading="lazy" />
-          <div class="info">
+        <div class="photo-card">
+         <a href="${largeImageURL}"><img src="${webformatURL}" alt="${tags}" />
+            <div class="info">
             <p class="info-item">
               <b>Likes</b> ${likes}
             </p>
@@ -130,7 +143,7 @@ function createMarkup(photoArr) {
             <p class="info-item">
               <b>Downloads</b> ${downloads}
             </p>
-          </div>
+          </div></a>
           </div>
     `
     )

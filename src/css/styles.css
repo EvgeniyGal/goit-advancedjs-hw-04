@@ -50,6 +50,16 @@
 
 .photo-card {
   max-width: calc((100% - 48px) / 4);
+  transition: cubic-bezier(0.075, 0.82, 0.165, 1);
+}
+
+.photo-card:hover {
+  transform: scale(1.05);
+}
+
+.photo-card a {
+  text-decoration: none;
+  color: #000000;
 }
 
 .photo-card img {
@@ -57,11 +67,6 @@
   aspect-ratio: 4 / 3;
   object-fit: cover;
   margin-bottom: 8px;
-  transition: cubic-bezier(0.075, 0.82, 0.165, 1);
-}
-
-.photo-card img:hover {
-  transform: scale(1.05);
 }
 
 .search-form {
