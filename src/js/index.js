@@ -5,19 +5,39 @@ import 'izitoast/dist/css/izitoast.min.css';
 import SimpleLightbox from 'simplelightbox';
 import 'simplelightbox/dist/simple-lightbox.min.css';
 
-let page = 1;
+let page;
 let question;
 let queryTotalHints;
 let order = 'popular';
-let simpleGallery = new SimpleLightbox('.gallery a');
+const simpleGallery = new SimpleLightbox('.gallery a');
+let isOvserverAlloved = false;
+let intervalId;
 
 const elements = {
   form: document.querySelector('.search-form'),
   gallery: document.querySelector('.gallery'),
   popularBtn: document.querySelector('[name="popular"]'),
   latestBtn: document.querySelector('[name="latest"]'),
-  loadMoreBtn: document.querySelector('.load-more'),
+  target: document.querySelector('.target'),
 };
+
+let observerOptions = {
+  rootMargin: '200px',
+  threshold: 1.0,
+};
+
+const observer = new IntersectionObserver(handlerLoadMore, observerOptions);
+observer.observe(elements.target);
+
+addEventListener('wheel', () => clearInterval(intervalId));
+
+addEventListener('click', () => clearInterval(intervalId));
+
+addEventListener('scrollend', () => {
+  if (window.scrollY + window.innerHeight + 1 > document.body.scrollHeight) {
+    clearInterval(intervalId);
+  }
+});
 
 elements.popularBtn.addEventListener('click', handlerChangeOrder);
 
@@ -29,48 +49,62 @@ function handlerChangeOrder(ev) {
   if (currBtn.name === order) {
     return;
   }
+
   if (!question) {
     order = currBtn.name;
     changeSelectedClassToBtn(currBtn.name);
     return;
   }
+
   page = 1;
+
   order = currBtn.name;
+
   pixabayApi
     .serviceImages(page, question, order)
     .then(({ hits, totalHits }) => {
       queryTotalHints = totalHits;
+
       elements.gallery.innerHTML = createMarkup(hits);
+
       simpleGallery.refresh();
+
+      clearInterval(intervalId);
+
+      runScrolling();
     })
     .catch(err => console.log(err));
+
   changeSelectedClassToBtn(currBtn.name);
 }
 
-function changeSelectedClassToBtn(name) {
-  elements.latestBtn.classList.toggle('active-btn', name === 'latest');
-  elements.popularBtn.classList.toggle('active-btn', name === 'popular');
-}
+function handlerLoadMore(ev) {
+  if (page > Math.ceil(queryTotalHints / 40) || !isOvserverAlloved) {
+    return;
+  }
 
-elements.loadMoreBtn.addEventListener('click', hamdlerLoadMore);
-
-function hamdlerLoadMore(ev) {
   page++;
+
   pixabayApi
     .serviceImages(page, question, order)
     .then(({ hits, totalHits }) => {
       queryTotalHints = totalHits;
+
       elements.gallery.insertAdjacentHTML('beforeend', createMarkup(hits));
 
       simpleGallery.refresh();
 
-      if (page >= Math.ceil(totalHits / 40)) {
-        ev.target.classList.toggle('hiden-element', true);
-        iziToast.warning({
-          position: 'bottomCenter',
-          title: "We're sorry,",
-          message: "but you've reached the end of search results.",
-        });
+      clearInterval(intervalId);
+
+      runScrolling();
+
+      if (page === Math.ceil(totalHits / 40)) {
+        showMessage(
+          'warning',
+          'bottomCenter',
+          "We're sorry,",
+          `but you've reached the end of search results.`
+        );
       }
     })
     .catch(err => console.log(err));
@@ -82,33 +116,42 @@ function handlerSubmit(ev) {
   ev.preventDefault();
 
   if (ev.currentTarget.elements.searchQuery.value) {
-    question = ev.currentTarget.elements.searchQuery.value;
+    page = 1;
 
-    elements.loadMoreBtn.classList.toggle('hiden-element', true);
+    isOvserverAlloved = false;
+
+    question = ev.currentTarget.elements.searchQuery.value;
 
     pixabayApi
       .serviceImages(page, question, order)
       .then(({ hits, totalHits } = {}) => {
         if (totalHits > 0) {
           queryTotalHints = totalHits;
+
           elements.gallery.innerHTML = createMarkup(hits);
+
           simpleGallery.refresh();
-          iziToast.success({
-            position: 'topLeft',
-            title: 'Hooray!',
-            message: `We found ${totalHits} images.`,
-          });
-          elements.loadMoreBtn.classList.toggle(
-            'hiden-element',
-            totalHits <= 40
+
+          showMessage(
+            'success',
+            'topLeft',
+            'Hooray!',
+            `We found ${totalHits} images.`
           );
+
+          setTimeout(() => (isOvserverAlloved = true), 3000);
+
+          clearInterval(intervalId);
+
+          runScrolling();
         } else {
-          iziToast.warning({
-            position: 'center',
-            title: 'Sorry,',
-            message:
-              'there are no images matching your search query. Please try again.',
-          });
+          showMessage(
+            'warning',
+            'center',
+            'Sorry,',
+            `there are no images matching your search query. Please try again.`
+          );
+
           elements.gallery.innerHTML = '';
         }
       })
@@ -148,4 +191,25 @@ function createMarkup(photoArr) {
     `
     )
     .join('');
+}
+
+function changeSelectedClassToBtn(name) {
+  elements.latestBtn.classList.toggle('active-btn', name === 'latest');
+  elements.popularBtn.classList.toggle('active-btn', name === 'popular');
+}
+
+function showMessage(type, position, title, message) {
+  iziToast[type]({
+    position,
+    title,
+    message,
+  });
+}
+
+function runScrolling() {
+  let position = window.scrollY;
+  intervalId = setInterval(() => {
+    window.scroll(0, position);
+    position += 1;
+  }, 20);
 }
