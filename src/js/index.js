@@ -1,7 +1,7 @@
 import * as pixabayApi from './pixabayApi';
 import 'normalize.css/normalize.css';
 import iziToast from 'izitoast';
-import 'izitoast/dist/css/izitoast.min.css';
+import 'izitoast/dist/css/izitoast.css';
 import SimpleLightbox from 'simplelightbox';
 import 'simplelightbox/dist/simple-lightbox.min.css';
 
