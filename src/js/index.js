@@ -10,7 +10,7 @@ let question;
 let queryTotalHints;
 let order = 'popular';
 const simpleGallery = new SimpleLightbox('.gallery a');
-let isOvserverAlloved = false;
+let isObserverAlloved = false;
 let intervalId;
 
 const elements = {
@@ -60,6 +60,8 @@ function handlerChangeOrder(ev) {
 
   order = currBtn.name;
 
+  isObserverAlloved = false;
+
   pixabayApi
     .serviceImages(page, question, order)
     .then(({ hits, totalHits }) => {
@@ -72,6 +74,8 @@ function handlerChangeOrder(ev) {
       clearInterval(intervalId);
 
       runScrolling();
+
+      setTimeout(() => (isObserverAlloved = true), 3000);
     })
     .catch(err => console.log(err));
 
@@ -79,7 +83,7 @@ function handlerChangeOrder(ev) {
 }
 
 function handlerLoadMore(ev) {
-  if (page > Math.ceil(queryTotalHints / 40) || !isOvserverAlloved) {
+  if (page > Math.ceil(queryTotalHints / 40) || !isObserverAlloved) {
     return;
   }
 
@@ -118,7 +122,7 @@ function handlerSubmit(ev) {
   if (ev.currentTarget.elements.searchQuery.value) {
     page = 1;
 
-    isOvserverAlloved = false;
+    isObserverAlloved = false;
 
     question = ev.currentTarget.elements.searchQuery.value;
 
@@ -139,7 +143,7 @@ function handlerSubmit(ev) {
             `We found ${totalHits} images.`
           );
 
-          setTimeout(() => (isOvserverAlloved = true), 3000);
+          setTimeout(() => (isObserverAlloved = true), 3000);
 
           clearInterval(intervalId);
 
