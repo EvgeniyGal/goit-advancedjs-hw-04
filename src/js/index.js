@@ -27,6 +27,7 @@ let observerOptions = {
 };
 
 const observer = new IntersectionObserver(handlerLoadMore, observerOptions);
+
 observer.observe(elements.target);
 
 addEventListener('wheel', () => clearInterval(intervalId));
@@ -36,6 +37,15 @@ addEventListener('click', () => clearInterval(intervalId));
 addEventListener('scrollend', () => {
   if (window.scrollY + window.innerHeight + 1 > document.body.scrollHeight) {
     clearInterval(intervalId);
+
+    if (page >= Math.ceil(queryTotalHints / 40)) {
+      showMessage(
+        'warning',
+        'bottomCenter',
+        "We're sorry,",
+        `but you've reached the end of search results.`
+      );
+    }
   }
 });
 
@@ -43,7 +53,7 @@ elements.popularBtn.addEventListener('click', handlerChangeOrder);
 
 elements.latestBtn.addEventListener('click', handlerChangeOrder);
 
-function handlerChangeOrder(ev) {
+async function handlerChangeOrder(ev) {
   const currBtn = ev.target;
 
   if (currBtn.name === order) {
@@ -62,104 +72,112 @@ function handlerChangeOrder(ev) {
 
   isObserverAlloved = false;
 
-  pixabayApi
-    .serviceImages(page, question, order)
-    .then(({ hits, totalHits }) => {
-      queryTotalHints = totalHits;
-
-      elements.gallery.innerHTML = createMarkup(hits);
-
-      simpleGallery.refresh();
-
-      clearInterval(intervalId);
-
-      runScrolling();
-
-      setTimeout(() => (isObserverAlloved = true), 3000);
-    })
-    .catch(err => console.log(err));
-
   changeSelectedClassToBtn(currBtn.name);
+
+  const newData = await pixabayApi.serviceImages(page, question, order);
+
+  try {
+    const { hits, totalHits } = newData;
+
+    queryTotalHints = totalHits;
+
+    elements.gallery.innerHTML = createMarkup(hits);
+
+    simpleGallery.refresh();
+
+    clearInterval(intervalId);
+
+    runScrolling();
+
+    setTimeout(() => (isObserverAlloved = true), 3000);
+  } catch (err) {
+    err => console.log(err);
+  }
 }
 
-function handlerLoadMore(ev) {
-  if (page > Math.ceil(queryTotalHints / 40) || !isObserverAlloved) {
+async function handlerLoadMore(ev) {
+  if (page >= Math.ceil(queryTotalHints / 40) || !isObserverAlloved) {
     return;
   }
 
   page++;
 
-  pixabayApi
-    .serviceImages(page, question, order)
-    .then(({ hits, totalHits }) => {
-      queryTotalHints = totalHits;
+  isObserverAlloved = false;
 
-      elements.gallery.insertAdjacentHTML('beforeend', createMarkup(hits));
+  const newData = await pixabayApi.serviceImages(page, question, order);
 
-      simpleGallery.refresh();
+  try {
+    const { hits, totalHits } = newData;
 
-      clearInterval(intervalId);
+    queryTotalHints = totalHits;
 
-      runScrolling();
+    elements.gallery.insertAdjacentHTML('beforeend', createMarkup(hits));
 
-      if (page === Math.ceil(totalHits / 40)) {
-        showMessage(
-          'warning',
-          'bottomCenter',
-          "We're sorry,",
-          `but you've reached the end of search results.`
-        );
-      }
-    })
-    .catch(err => console.log(err));
+    simpleGallery.refresh();
+
+    clearInterval(intervalId);
+
+    runScrolling();
+
+    setTimeout(() => (isObserverAlloved = true), 3000);
+  } catch (err) {
+    err => console.log(err);
+  }
 }
 
 elements.form.addEventListener('submit', handlerSubmit);
 
-function handlerSubmit(ev) {
+async function handlerSubmit(ev) {
   ev.preventDefault();
 
-  if (ev.currentTarget.elements.searchQuery.value) {
+  const currentQuestion = ev.currentTarget.elements.searchQuery.value.trim();
+
+  if (currentQuestion) {
     page = 1;
 
     isObserverAlloved = false;
 
     question = ev.currentTarget.elements.searchQuery.value;
 
-    pixabayApi
-      .serviceImages(page, question, order)
-      .then(({ hits, totalHits } = {}) => {
-        if (totalHits > 0) {
-          queryTotalHints = totalHits;
+    const newData = await pixabayApi.serviceImages(page, question, order);
 
-          elements.gallery.innerHTML = createMarkup(hits);
+    try {
+      const { hits, totalHits } = newData;
 
-          simpleGallery.refresh();
+      if (totalHits > 0) {
+        queryTotalHints = totalHits;
 
-          showMessage(
-            'success',
-            'topLeft',
-            'Hooray!',
-            `We found ${totalHits} images.`
-          );
+        elements.gallery.innerHTML = createMarkup(hits);
 
-          setTimeout(() => (isObserverAlloved = true), 3000);
+        simpleGallery.refresh();
 
-          clearInterval(intervalId);
+        showMessage(
+          'success',
+          'topLeft',
+          'Hooray!',
+          `We found ${totalHits} images.`
+        );
 
-          runScrolling();
-        } else {
-          showMessage(
-            'warning',
-            'center',
-            'Sorry,',
-            `there are no images matching your search query. Please try again.`
-          );
+        setTimeout(() => (isObserverAlloved = true), 3000);
 
-          elements.gallery.innerHTML = '';
-        }
-      })
-      .catch(err => console.log(err.message));
+        clearInterval(intervalId);
+
+        runScrolling();
+      } else {
+        showMessage(
+          'warning',
+          'center',
+          'Sorry,',
+          `there are no images matching your search query. Please try again.`
+        );
+
+        elements.gallery.innerHTML = '';
+      }
+    } catch (err) {
+      err => console.log(err);
+    }
+  } else {
+    ev.currentTarget.reset();
   }
 }
 
